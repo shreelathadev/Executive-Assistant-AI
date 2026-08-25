@@ -7,12 +7,19 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.10  # pinned: pydantic-core==2.23.4 (from pydantic==2.9.2) has a
+                         # confirmed prebuilt wheel for this version -- the same one
+                         # your local Windows dev environment used successfully.
+                         # Without this pin, Render may default to a newer Python
+                         # (3.13+) with no prebuilt wheel, forcing a source build
+                         # that fails with no Rust toolchain in the build image.
       - key: DATABASE_URL
         fromDatabase:
           name: executive-assistant-db
           property: connectionString
       - key: GEMINI_API_KEY
-        sync: false  # set manually in the Render dashboard — never commit this
+        sync: false  # set manually in the Render dashboard -- never commit this
       - key: GEMINI_MODEL
         value: gemini-3.5-flash-lite
       - key: FRONTEND_ORIGIN

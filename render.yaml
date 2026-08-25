@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: executive-assistant-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: executive-assistant-db
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false  # set manually in the Render dashboard — never commit this
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: FRONTEND_ORIGIN
+        sync: false  # set to your Vercel URL after the frontend is deployed
+
+databases:
+  - name: executive-assistant-db
+    plan: free

@@ -8,12 +8,7 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.10  # pinned: pydantic-core==2.23.4 (from pydantic==2.9.2) has a
-                         # confirmed prebuilt wheel for this version -- the same one
-                         # your local Windows dev environment used successfully.
-                         # Without this pin, Render may default to a newer Python
-                         # (3.13+) with no prebuilt wheel, forcing a source build
-                         # that fails with no Rust toolchain in the build image.
+        value: 3.11.10  # pinned: avoids a pydantic-core wheel/build mismatch
       - key: DATABASE_URL
         fromDatabase:
           name: executive-assistant-db
@@ -24,6 +19,11 @@ services:
         value: gemini-3.5-flash-lite
       - key: FRONTEND_ORIGIN
         sync: false  # set to your Vercel URL after the frontend is deployed
+      - key: ADMIN_SEED_SECRET
+        sync: false  # set to any random string yourself -- used once to seed
+                      # the DB via POST /api/admin/seed on free-tier Render
+                      # (no shell access). Safe to leave set indefinitely,
+                      # or blank it out after seeding to disable the endpoint.
 
 databases:
   - name: executive-assistant-db

@@ -42,4 +42,9 @@ class Settings:
     ADMIN_SEED_SECRET: str = os.getenv("ADMIN_SEED_SECRET", "")
 
 
+    # JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "dev-only-insecure-secret-change-in-production")
+    # JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # 7 days
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "dev-only-insecure-secret-change-in-production")
+    JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # 7 days
+
 settings = Settings()

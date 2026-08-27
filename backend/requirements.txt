@@ -5,3 +5,8 @@ psycopg2-binary==2.9.9
 pydantic==2.9.2
 python-dotenv==1.0.1
 google-genai==1.20.0
+bcrypt==5.0.0
+pyjwt==2.7.0
+pydantic[email]==2.9.2
+alembic==1.19.1
+

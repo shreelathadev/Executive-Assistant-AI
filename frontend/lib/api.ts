@@ -14,6 +14,9 @@ import type {
   SaveActionItem,
   SaveDecisionItem,
   NotesSaveResult,
+  User,
+  SignupInput,
+  LoginInput,
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -33,6 +36,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       "Content-Type": "application/json",
       ...(options?.headers || {}),
     },
+    // REQUIRED for auth to work at all: the backend sets an httpOnly auth
+    // cookie, and fetch() does NOT send cookies cross-origin (Vercel
+    // frontend + Render backend are different domains) unless you say so
+    // explicitly. Without this, every authenticated request silently
+    // drops the cookie and 401s.
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -49,6 +58,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  auth: {
+    signup: (data: SignupInput) =>
+      request<{ access_token: string; token_type: string }>("/api/auth/signup", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    login: (data: LoginInput) =>
+      request<{ access_token: string; token_type: string }>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    me: () => request<User>("/api/auth/me"),
+    logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST" }),
+  },
   dashboard: {
     summary: () => request<DashboardSummary>("/api/dashboard/summary"),
   },

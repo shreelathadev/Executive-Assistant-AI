@@ -3,14 +3,18 @@ Signup/login business logic. Follows the same pattern as every other
 service module in this app -- plain functions taking a db Session,
 nothing FastAPI-specific here, so it's testable and reusable outside
 the request/response cycle.
+
+Personal-assistant model: every user owns their own data directly via
+user_id -- no workspace/tenant layer. This matches how tasks, meetings,
+follow-ups, and decisions were already scoped from Day 1.
 """
 from typing import Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from app.db.models import User, Workspace
-from app.security import hash_password, verify_password, create_access_token, decode_access_token
+from app.db.models import User
+from app.security import hash_password, verify_password
 
 
 def signup(
@@ -18,28 +22,16 @@ def signup(
     name: str,
     email: str,
     password: str,
-    company: str,
+    company: Optional[str] = None,
     role: Optional[str] = None,
 ) -> User:
-    """
-    Creates a new workspace (the "company/client" isolation boundary)
-    and the first user in it. Phase 1 is one user per workspace -- the
-    user who signs up is that workspace's only member for now. Inviting
-    teammates into an existing workspace is a contained follow-up
-    feature, not something built speculatively here.
-    """
     email = email.strip().lower()
-
-    workspace = Workspace(name=company)
-    db.add(workspace)
-    db.flush()  # get workspace.id without committing yet, so signup is one atomic transaction
 
     user = User(
         name=name,
         email=email,
         role=role,
         company=company,
-        workspace_id=workspace.id,
         hashed_password=hash_password(password),
     )
     db.add(user)

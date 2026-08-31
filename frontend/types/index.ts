@@ -170,3 +170,26 @@ export interface NotesSaveResult {
   created_decision_ids: number[];
 }
 
+
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string | null;
+  company: string | null;
+}
+
+export interface SignupInput {
+  name: string;
+  email: string;
+  password: string;
+  company?: string;
+  role?: string;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+

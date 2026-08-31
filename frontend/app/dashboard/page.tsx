@@ -1,3 +1,4 @@
+//frontend/app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,6 +8,7 @@ import type { DashboardSummary } from "@/types";
 import { Card, LoadingState, ErrorState } from "@/components/ui/primitives";
 import { PriorityBadge } from "@/components/ui/badge";
 import { formatDate, daysAgo } from "@/lib/utils";
+import { useAuth } from "@/lib/AuthContext";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -24,6 +26,7 @@ const STATS = [
 ] as const;
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,13 +43,18 @@ export default function DashboardPage() {
 
   useEffect(load, []);
 
+  // First name only, for a natural greeting ("Good morning, Shree" not
+  // "Good morning, Shree Kumar Reddy"). Falls back to "there" during the
+  // brief window before AuthContext's initial /me check resolves.
+  const firstName = user?.name?.split(" ")[0] ?? "there";
+
   return (
     <div className="px-8 py-8 max-w-6xl">
       <header className="mb-6">
         <p className="text-xs uppercase tracking-wide text-ink-500 font-medium">
           {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </p>
-        <h1 className="mt-1 font-display text-3xl text-ink-900">{greeting()}, Alex</h1>
+        <h1 className="mt-1 font-display text-3xl text-ink-900">{greeting()}, {firstName}</h1>
       </header>
 
       {loading && <LoadingState label="Preparing your briefing…" />}

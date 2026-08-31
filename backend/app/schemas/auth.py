@@ -6,7 +6,7 @@ class SignupRequest(BaseModel):
     name: str = Field(min_length=1)
     email: EmailStr
     password: str = Field(min_length=8)
-    company: str = Field(min_length=1)
+    company: Optional[str] = None
     role: Optional[str] = None
 
 
@@ -26,7 +26,6 @@ class UserOut(BaseModel):
     email: str
     role: Optional[str] = None
     company: Optional[str] = None
-    workspace_id: Optional[int] = None
 
     class Config:
         from_attributes = True

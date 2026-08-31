@@ -1,4 +1,3 @@
-#agent_service.py
 """
 The conversation loop. Talks to Gemini with persistent database storage.
 
@@ -23,7 +22,7 @@ from google.genai import errors as genai_errors
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.agent.gemini_client import get_client, SYSTEM_INSTRUCTION
+from app.agent.gemini_client import get_client, build_system_instruction
 from app.agent.tools import build_tools, CONFIRMATION_REQUIRED_TOOLS
 from app.agent.tool_dispatcher import dispatch_tool
 from app.schemas.assistant import (
@@ -33,7 +32,7 @@ from app.schemas.assistant import (
     ConversationDetailOut,
     ConversationMessageOut,
 )
-from app.db.models import AIActionLog, Conversation, ConversationMessage
+from app.db.models import AIActionLog, Conversation, ConversationMessage, User
 from app.services import task_service
 
 MAX_TOOL_STEPS = 6
@@ -49,20 +48,6 @@ def _log_action(db: Session, user_id: int, tool_name: str, args: dict, result: d
         confirmed=confirmed,
     ))
     db.commit()
-
-
-# def _describe_action(db: Session, user_id: int, tool_name: str, args: dict) -> str:
-#     if tool_name == "complete_task":
-#         task = task_service.get_task(db, user_id, int(args.get("task_id", 0)))
-#         title = f'"{task.title}"' if task else f"task #{args.get('task_id')}"
-#         return f"Mark {title} as completed?"
-#     if tool_name == "update_task":
-#         task = task_service.get_task(db, user_id, int(args.get("task_id", 0)))
-#         title = f'"{task.title}"' if task else f"task #{args.get('task_id')}"
-#         changes = ", ".join(f"{k}: {v}" for k, v in args.items() if k != "task_id")
-#         return f"Update {title} ({changes})?"
-#     return f"Run {tool_name} with {args}?"
-
 
 
 def _describe_action(db: Session, user_id: int, tool_name: str, args: dict) -> str:
@@ -98,22 +83,6 @@ def _describe_action(db: Session, user_id: int, tool_name: str, args: dict) -> s
         changes = ", ".join(f"{k}: {v}" for k, v in args.items() if k != "decision_id")
         return f"Update {title} ({changes})?"
     return f"Run {tool_name} with {args}?"
-
-
-# WHY THIS SHAPE
-# ===============
-# - delete_task gets an explicit "This cannot be undone" — per your
-#   instruction that delete must be unambiguous to the user, not just
-#   gated, but clearly described as irreversible.
-# - update_meeting/update_follow_up/update_decision follow the exact same
-#   "fetch the real entity, name it, list the changed fields" pattern
-#   already used for update_task, rather than introducing a new style.
-# - meeting_service/follow_up_service/decision_service are imported
-#   locally inside each branch rather than at the top of the file, since
-#   only task_service is currently imported module-wide in
-#   agent_service.py — this matches the existing lazy-import convention
-#   already used elsewhere in this codebase (e.g. inside
-#   meeting_service.get_meeting_context).
 
 
 def _save_content_message(
@@ -170,10 +139,24 @@ def _get_or_create_conversation(
 
 
 def _continue_loop(db: Session, user_id: int, conversation_id: str, contents: list) -> ChatResponse:
+    # Built fresh per call from whoever is actually logged in -- this
+    # used to be a hardcoded "Alex Morgan, NovaTech" constant, which is
+    # what caused the assistant to insist it belonged to someone else
+    # regardless of who was actually talking to it. See
+    # gemini_client.build_system_instruction's docstring for the full
+    # story. Fetched once here (not per loop iteration) since it doesn't
+    # change mid-conversation and there's no reason for repeated queries.
+    user = db.query(User).filter(User.id == user_id).first()
+    system_instruction = build_system_instruction(
+        user.name if user else "there",
+        user.role if user else None,
+        user.company if user else None,
+    )
+
     client = get_client()
     config = types.GenerateContentConfig(
         tools=build_tools(),
-        system_instruction=SYSTEM_INSTRUCTION,
+        system_instruction=system_instruction,
         max_output_tokens=2048,
         thinking_config=types.ThinkingConfig(thinking_budget=1024),
     )
@@ -420,4 +403,3 @@ def delete_conversation(db: Session, user_id: int, conversation_id: str) -> bool
     db.delete(conv)
     db.commit()
     return True
-

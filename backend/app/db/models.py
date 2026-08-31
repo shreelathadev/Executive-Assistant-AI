@@ -43,16 +43,6 @@ class DecisionStatusEnum(str, enum.Enum):
     decided = "decided"
 
 
-class Workspace(Base):
-    __tablename__ = "workspaces"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    users = relationship("User", back_populates="workspace")
-
-
 class User(Base):
     __tablename__ = "users"
 
@@ -64,16 +54,14 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Auth/onboarding additions. Nullable at the DB level -- the existing
-    # demo user (id=1) predates auth and has neither a workspace nor a
-    # password; enforcing "required" happens at the Pydantic/signup layer
-    # for NEW users, not as a DB constraint that would break the old row.
-    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=True, index=True)
+    # demo user (id=1) predates auth and has no password; enforcing
+    # "required" happens at the Pydantic/signup layer for NEW users, not
+    # as a DB constraint that would break the old row.
     hashed_password = Column(String, nullable=True)
     preferences = Column(JSON, nullable=True)  # flexible key/value: working
         # hours, priorities, communication style, decision-making style --
         # deliberately not fixed columns, since this list will keep growing.
 
-    workspace = relationship("Workspace", back_populates="users")
     tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")

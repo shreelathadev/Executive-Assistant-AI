@@ -344,7 +344,7 @@ export default function ChatWindow() {
                 <div className="pt-6 pb-2">
                   <div className="mb-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-brass-dark mb-1">
-                      NovaTech Executive Assistant
+                      Your Executive Assistant
                     </p>
                     <p className="text-sm text-ink-700">
                       I can help review today&apos;s schedule, identify overdue deliverables, summarize follow-ups, and run confirmation-gated updates.
@@ -445,4 +445,3 @@ export default function ChatWindow() {
     </div>
   );
 }
-

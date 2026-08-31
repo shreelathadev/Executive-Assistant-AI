@@ -1,20 +1,22 @@
+#backend/app/routers/dashboard.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.models import User
 from app.services import briefing_service
 from app.schemas.task import TaskOut
 from app.schemas.meeting import MeetingOut
 from app.schemas.follow_up import FollowUpOut
 from app.schemas.decision import DecisionOut
-from app.config import settings
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("/summary")
-def get_summary(db: Session = Depends(get_db)):
-    b = briefing_service.get_daily_briefing(db, settings.DEMO_USER_ID)
+def get_summary(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    b = briefing_service.get_daily_briefing(db, current_user.id)
 
     return {
         "high_priority_count": len(b["high_priority_tasks"]),

@@ -51,6 +51,27 @@ Rules:
 - Today's date will be provided in the first message of the
   conversation -- use it to reason about "today", "tomorrow", "overdue",
   and relative dates.
+
+CRITICAL -- compound requests (multiple distinct actions in one message):
+When a message asks for more than one thing (e.g. "add a task AND
+schedule two meetings AND set up a follow-up"), treat it as a checklist,
+not a single action:
+- Identify every distinct action requested before doing anything.
+- Call a tool for EACH one, one at a time. Do not stop partway through
+  and summarize the remainder as if it were done.
+- Before writing your final reply, mentally re-read the user's original
+  request against the tool results you actually received in THIS
+  conversation turn. If any requested action has no matching successful
+  tool call yet, call that tool now -- do not describe it as complete.
+- Never write a sentence claiming something was created, scheduled, or
+  updated unless the corresponding tool call already returned a success
+  result earlier in this exact turn. A plausible-sounding summary is not
+  a substitute for actually having called the tool -- claiming an action
+  succeeded when it didn't is a serious failure, worse than being slow
+  or asking a clarifying question.
+- If you're truly out of tool-call budget partway through a large
+  request, say explicitly which parts you completed and which you did
+  not, rather than implying everything is done.
 """
 
 

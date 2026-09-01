@@ -35,7 +35,13 @@ from app.schemas.assistant import (
 from app.db.models import AIActionLog, Conversation, ConversationMessage, User
 from app.services import task_service
 
-MAX_TOOL_STEPS = 6
+MAX_TOOL_STEPS = 8  # was 6 -- a compound request (task + 2 meetings + a
+# follow-up = 4 tool calls + 1 final summary = 5 steps) already fit in the
+# old budget, so the fabrication bug wasn't actually caused by running out
+# of steps. Raised anyway for safety margin on larger requests, and because
+# more headroom costs little and rules out step-budget as a variable while
+# diagnosing whether the prompt fix (see gemini_client.py) is sufficient
+# on its own.
 
 
 def _log_action(db: Session, user_id: int, tool_name: str, args: dict, result: dict, required_confirmation: bool, confirmed: bool) -> None:
@@ -157,8 +163,10 @@ def _continue_loop(db: Session, user_id: int, conversation_id: str, contents: li
     config = types.GenerateContentConfig(
         tools=build_tools(),
         system_instruction=system_instruction,
-        max_output_tokens=2048,
-        thinking_config=types.ThinkingConfig(thinking_budget=1024),
+        max_output_tokens=3072,  # was 2048 -- more room to actually plan
+        # and execute a multi-step compound request instead of truncating
+        # into a premature summary
+        thinking_config=types.ThinkingConfig(thinking_budget=1536),  # was 1024
     )
 
     conv = (

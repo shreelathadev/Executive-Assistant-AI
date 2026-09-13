@@ -27,12 +27,6 @@ class Settings:
     # override via GEMINI_MODEL in .env if Google changes availability again.
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
-    # MVP has no auth system. Every request acts as this single demo user.
-    # Swapping in real auth later only means replacing how DEMO_USER_ID is
-    # resolved per-request -- every service function already takes user_id
-    # as an explicit argument and filters on it, so nothing else changes.
-    DEMO_USER_ID: int = 1
-
     FRONTEND_ORIGIN: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
 
     # Deploy-convenience only -- protects POST /api/admin/seed on platforms
@@ -41,10 +35,25 @@ class Settings:
     # real auth exists.
     ADMIN_SEED_SECRET: str = os.getenv("ADMIN_SEED_SECRET", "")
 
-
-    # JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "dev-only-insecure-secret-change-in-production")
-    # JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # 7 days
+    # Auth
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "dev-only-insecure-secret-change-in-production")
     JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # 7 days
+
+    # --- NEW: rate limits (slowapi format: "<count>/<second|minute|hour|day>") ---
+    # AI-calling endpoints (meeting briefs, notes extraction, decision
+    # recommendations, follow-up drafts, assistant chat/confirm) -- each
+    # call costs real Gemini quota/money, so a public URL needs a ceiling
+    # independent of Google's own rate limits.
+    AI_RATE_LIMIT: str = os.getenv("AI_RATE_LIMIT", "15/minute")
+
+    # Login: generous enough that a real user mistyping their password a
+    # few times isn't blocked, tight enough to make brute-forcing a
+    # password impractical.
+    LOGIN_RATE_LIMIT: str = os.getenv("LOGIN_RATE_LIMIT", "10/minute")
+
+    # Signup: legitimate users sign up once. Tight limit mainly to deter
+    # spam-account creation from a single IP.
+    SIGNUP_RATE_LIMIT: str = os.getenv("SIGNUP_RATE_LIMIT", "5/hour")
+
 
 settings = Settings()

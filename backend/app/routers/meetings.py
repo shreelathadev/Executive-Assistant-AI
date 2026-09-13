@@ -1,7 +1,7 @@
 #backend/app/routers/meetings.py
 from datetime import date
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -10,6 +10,8 @@ from app.schemas.meeting import MeetingCreate, MeetingUpdate, MeetingOut, Meetin
 from app.services import meeting_service
 from app.agent.meeting_brief import generate_meeting_brief
 from app.dependencies import get_current_user
+from app.rate_limit import limiter
+from app.config import settings
 
 router = APIRouter(prefix="/api/meetings", tags=["meetings"])
 
@@ -38,7 +40,8 @@ def get_meeting(meeting_id: int, db: Session = Depends(get_db), current_user: Us
 
 
 @router.get("/{meeting_id}/brief", response_model=MeetingBriefOut)
-def get_meeting_brief(meeting_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@limiter.limit(settings.AI_RATE_LIMIT)
+def get_meeting_brief(meeting_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         brief = generate_meeting_brief(db, current_user.id, meeting_id)
     except RuntimeError as e:

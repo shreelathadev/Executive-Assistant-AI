@@ -1,5 +1,5 @@
 #backend/app/routers/assistant.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -13,6 +13,8 @@ from app.schemas.assistant import (
 )
 from app.agent import agent_service
 from app.dependencies import get_current_user
+from app.rate_limit import limiter
+from app.config import settings
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
@@ -38,14 +40,16 @@ def delete_conversation(conversation_id: str, db: Session = Depends(get_db), cur
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@limiter.limit(settings.AI_RATE_LIMIT)
+def chat(request: Request, payload: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return agent_service.run_chat_turn(
         db, current_user.id, payload.conversation_id, payload.message
     )
 
 
 @router.post("/confirm", response_model=ChatResponse)
-def confirm(payload: ConfirmRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@limiter.limit(settings.AI_RATE_LIMIT)
+def confirm(request: Request, payload: ConfirmRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return agent_service.run_confirm_turn(
         db, current_user.id, payload.conversation_id, payload.pending_id, payload.approve
     )

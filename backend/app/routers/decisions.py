@@ -1,6 +1,6 @@
 #backend/app/routers/decisions.py
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -9,6 +9,8 @@ from app.schemas.decision import DecisionCreate, DecisionUpdate, DecisionOut
 from app.services import decision_service
 from app.agent.decision_recommendation import generate_decision_recommendation
 from app.dependencies import get_current_user
+from app.rate_limit import limiter
+from app.config import settings
 
 router = APIRouter(prefix="/api/decisions", tags=["decisions"])
 
@@ -40,7 +42,8 @@ def update_decision(decision_id: int, payload: DecisionUpdate, db: Session = Dep
 
 
 @router.post("/{decision_id}/recommend", response_model=DecisionOut)
-def recommend_decision(decision_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@limiter.limit(settings.AI_RATE_LIMIT)
+def recommend_decision(decision_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     decision = decision_service.get_decision(db, current_user.id, decision_id)
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+# backend/app/routers/auth.py
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -7,6 +8,8 @@ from app.schemas.auth import SignupRequest, LoginRequest, TokenResponse, UserOut
 from app.services import auth_service
 from app.security import create_access_token
 from app.dependencies import get_current_user
+from app.rate_limit import limiter
+from app.config import settings
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -18,7 +21,8 @@ COOKIE_KWARGS = dict(httponly=True, secure=True, samesite="none")
 
 
 @router.post("/signup", response_model=TokenResponse, status_code=201)
-def signup(payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
+@limiter.limit(settings.SIGNUP_RATE_LIMIT)
+def signup(request: Request, payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
     try:
         user = auth_service.signup(
             db,
@@ -37,7 +41,8 @@ def signup(payload: SignupRequest, response: Response, db: Session = Depends(get
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
+@limiter.limit(settings.LOGIN_RATE_LIMIT)
+def login(request: Request, payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = auth_service.authenticate(db, payload.email, payload.password)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect email or password")
@@ -55,11 +60,7 @@ def me(current_user: User = Depends(get_current_user)):
 @router.post("/logout")
 def logout(response: Response):
     # MUST pass the same secure/samesite/httponly attributes used when the
-    # cookie was set. Browsers silently reject a Set-Cookie header in a
-    # cross-site response unless it's Secure + SameSite=None -- using
-    # Starlette's defaults here (secure=False, samesite="lax") meant this
-    # deletion instruction was being dropped entirely by the browser,
-    # leaving the original 7-day cookie alive. This is why "logged out"
-    # users came right back after a refresh.
+    # cookie was set -- browsers silently reject a Set-Cookie header in a
+    # cross-site response unless it's Secure + SameSite=None.
     response.delete_cookie(key="access_token", **COOKIE_KWARGS)
     return {"ok": True}

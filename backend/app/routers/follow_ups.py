@@ -1,6 +1,6 @@
 #backend/app/routers/follow_ups.py
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -9,6 +9,8 @@ from app.schemas.follow_up import FollowUpCreate, FollowUpUpdate, FollowUpOut, F
 from app.services import follow_up_service
 from app.agent.follow_up_draft import generate_follow_up_draft
 from app.dependencies import get_current_user
+from app.rate_limit import limiter
+from app.config import settings
 
 router = APIRouter(prefix="/api/follow-ups", tags=["follow-ups"])
 
@@ -40,7 +42,8 @@ def update_follow_up(follow_up_id: int, payload: FollowUpUpdate, db: Session = D
 
 
 @router.post("/{follow_up_id}/draft", response_model=FollowUpDraftOut)
-def draft_follow_up(follow_up_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@limiter.limit(settings.AI_RATE_LIMIT)
+def draft_follow_up(follow_up_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     follow_up = follow_up_service.get_follow_up(db, current_user.id, follow_up_id)
     if not follow_up:
         raise HTTPException(status_code=404, detail="Follow-up not found")

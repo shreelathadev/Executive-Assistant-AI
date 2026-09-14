@@ -213,3 +213,33 @@ class ConversationMessage(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     conversation = relationship("Conversation", back_populates="messages")
+
+
+class TaskCheckIn(Base):
+    """
+    Tracks one scheduled check-in occurrence for a task.
+
+    One row = one day (or week) that needs a yes/no answer.
+    The service layer creates rows on demand when the user opens the
+    assistant; it never creates them in the past or beyond end_date.
+
+    completed=None  → not yet answered
+    completed=True  → user said they did it
+    completed=False → user said they skipped/didn't do it
+    """
+    __tablename__ = "task_checkins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    frequency = Column(String, nullable=False)   # "daily" | "weekly"
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+
+    check_in_date = Column(Date, nullable=False)   # the specific day this row covers
+    completed = Column(Boolean, nullable=True)      # NULL = unanswered
+    notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    responded_at = Column(DateTime, nullable=True)

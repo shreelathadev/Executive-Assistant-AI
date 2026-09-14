@@ -33,7 +33,7 @@ from app.schemas.assistant import (
     ConversationMessageOut,
 )
 from app.db.models import AIActionLog, Conversation, ConversationMessage, User
-from app.services import task_service
+from app.services import task_service, checkin_service
 
 MAX_TOOL_STEPS = 8  # was 6 -- a compound request (task + 2 meetings + a
 # follow-up = 4 tool calls + 1 final summary = 5 steps) already fit in the
@@ -283,6 +283,35 @@ def run_chat_turn(db: Session, user_id: int, conversation_id: str | None, messag
         conv.title = (message[:40] + "…") if len(message) > 40 else message
     conv.updated_at = datetime.utcnow()
     db.commit()
+
+    # --- Server-side check-in injection -----------------------------------
+    # Compute pending check-ins here, not via a tool, so Gemini doesn't need
+    # to spend a tool-call budget slot on every turn just to find out if
+    # there's anything to surface. If there are pending check-ins, we prepend
+    # a system-level context note to `contents` for this Gemini call only.
+    # The note is NOT saved to the conversation_messages table, so it doesn't
+    # pollute the persisted history — it's ephemeral grounding for this turn.
+    pending_checkins = checkin_service.get_pending_check_ins(db, user_id)
+    if pending_checkins:
+        lines = ["[SYSTEM CONTEXT — not shown to user]"]
+        lines.append("The following check-ins are pending for today (unanswered):")
+        for ci in pending_checkins:
+            lines.append(
+                f"- check_in_id={ci['check_in_id']} | task: \"{ci['task_title']}\" "
+                f"(task_id={ci['task_id']}) | frequency: {ci['frequency']}"
+            )
+        lines.append(
+            "If the user hasn't said anything that directly answers one of these check-ins, "
+            "proactively ask them about it before answering their question. "
+            "When they respond yes/no, call record_check_in_response with the correct check_in_id."
+        )
+        checkin_context = types.Content(
+            role="user",
+            parts=[types.Part(text="\n".join(lines))],
+        )
+        # Insert just before the user's real message (second-to-last in contents)
+        contents.insert(len(contents) - 1, checkin_context)
+    # ----------------------------------------------------------------------
 
     return _continue_loop(db, user_id, conv.id, contents)
 

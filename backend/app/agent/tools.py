@@ -288,6 +288,58 @@ _TOOL_DECLARATIONS = [
             "required": ["decision_id"],
         },
     ),
+    # ----------------------------------------------------------- check-ins
+    types.FunctionDeclaration(
+        name="enable_task_check_in",
+        description=(
+            "Register a task for proactive daily or weekly check-ins. "
+            "The assistant will surface a check-in prompt whenever the user "
+            "opens a conversation while the check-in window is active. "
+            "Safe to call directly without confirmation."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "integer", "description": "The id of the task to track."},
+                "frequency": {
+                    "type": "string",
+                    "enum": ["daily", "weekly"],
+                    "description": "How often to check in.",
+                },
+                "start_date": {"type": "string", "description": "ISO date YYYY-MM-DD. First check-in date."},
+                "end_date": {"type": "string", "description": "ISO date YYYY-MM-DD. Last check-in date."},
+            },
+            "required": ["task_id", "frequency", "start_date", "end_date"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="record_check_in_response",
+        description=(
+            "Record the user's answer to a check-in prompt: whether they completed "
+            "the activity and any optional notes. Call this immediately when the user "
+            "responds yes/no to a surfaced check-in. No confirmation needed."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "check_in_id": {"type": "integer", "description": "The id of the check-in row to update."},
+                "completed": {"type": "boolean", "description": "True if the user completed the activity, False if they skipped it."},
+                "notes": {"type": "string", "description": "Optional notes the user added."},
+            },
+            "required": ["check_in_id", "completed"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="get_check_in_summary",
+        description="Get a progress summary for a task's check-in history: how many sessions completed, skipped, still unanswered.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "integer"},
+            },
+            "required": ["task_id"],
+        },
+    ),
 ]
 
 

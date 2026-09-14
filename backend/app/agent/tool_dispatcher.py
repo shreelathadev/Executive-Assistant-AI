@@ -5,13 +5,15 @@ asked for X" and "the database did X" — the agent itself never touches
 SQLAlchemy, and every function here takes user_id explicitly, so a tool
 call can never cross into another user's data.
 """
+from datetime import date
 from sqlalchemy.orm import Session
 
-from app.services import task_service, meeting_service, follow_up_service, decision_service, context_service, briefing_service
+from app.services import task_service, meeting_service, follow_up_service, decision_service, context_service, briefing_service, checkin_service
 from app.schemas.task import TaskCreate, TaskUpdate, TaskOut
 from app.schemas.meeting import MeetingCreate, MeetingUpdate, MeetingOut
 from app.schemas.follow_up import FollowUpCreate, FollowUpUpdate, FollowUpOut
 from app.schemas.decision import DecisionCreate, DecisionUpdate, DecisionOut
+
 
 
 def _task_json(t):
@@ -158,6 +160,29 @@ def _search_user_context(db: Session, user_id: int, args: dict) -> dict:
     return {"count": len(results), "results": results}
 
 
+def _enable_task_check_in(db: Session, user_id: int, args: dict) -> dict:
+    return checkin_service.enable_check_in(
+        db, user_id,
+        task_id=int(args["task_id"]),
+        frequency=args["frequency"],
+        start_date=date.fromisoformat(args["start_date"]),
+        end_date=date.fromisoformat(args["end_date"]),
+    )
+
+
+def _record_check_in_response(db: Session, user_id: int, args: dict) -> dict:
+    return checkin_service.record_check_in_response(
+        db, user_id,
+        check_in_id=int(args["check_in_id"]),
+        completed=bool(args["completed"]),
+        notes=args.get("notes"),
+    )
+
+
+def _get_check_in_summary(db: Session, user_id: int, args: dict) -> dict:
+    return checkin_service.get_check_in_summary(db, user_id, task_id=int(args["task_id"]))
+
+
 def _get_daily_briefing(db: Session, user_id: int, args: dict) -> dict:
     b = briefing_service.get_daily_briefing(db, user_id)
     return {
@@ -189,6 +214,9 @@ _DISPATCH = {
     "create_decision": _create_decision,
     "update_decision": _update_decision,
     "search_user_context": _search_user_context,
+    "enable_task_check_in": _enable_task_check_in,
+    "record_check_in_response": _record_check_in_response,
+    "get_check_in_summary": _get_check_in_summary,
 }
 
 
